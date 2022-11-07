@@ -162,5 +162,19 @@ router.get('/usuarios',  (req, res)=>{
     })
 });
 
+////////////login de usuarios //////////////
+router.post('/login', (req, res)=>{
+    const {username, password} =req.body
+    mysqlConeccion.query('select u.id, u.username, u.email, u.apellido_nombre from usuarios u where u.estado="A" AND username=? AND password=?',[username, password], (err, rows)=>{
+        if(!err){
+            console.log(rows);
+            res.json(rows);
+        }else{
+            res.send('Error'+ err);
+        }
+    });
+    
+});
+
 module.exports = router;
 
