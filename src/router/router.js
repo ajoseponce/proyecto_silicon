@@ -176,5 +176,18 @@ router.post('/login', (req, res)=>{
     
 });
 
+////////////login de usuarios //////////////
+router.post('/registro', (req, res)=>{
+    const {username, password, email, apellido_nombre} =req.body
+    let query=`INSERT INTO usuarios (username, password, email, apellido_nombre, fecha_creacion) VALUES ('${username}','${password}','${email}','${apellido_nombre}',NOW())`;
+    mysqlConeccion.query(query, (err, registros)=>{
+        if(!err){
+            res.send('Se inserto correctamente nuestro usuario: '+username);
+        }else{
+            res.send('Ocurrio un error desde el servidor');
+        }
+    })
+});
+
 module.exports = router;
 
