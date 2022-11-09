@@ -1,9 +1,12 @@
 const express= require('express');
 const router = express();
-
+// libreria que utilizaremos para la encriptacion de los password
+const bcrypt= require('bcrypt');
 //////archivo de coneccion
 const mysqlConeccion = require('../database/database');
-//////archivo de coneccion
+//////fin archivo de coneccion
+
+///////ruta raiz
 router.get('/', (req, res)=>{
     res.send('Pantalla Inicio de nuestra aplicacion');
 });
@@ -155,6 +158,7 @@ router.put('/alumnos/:id', (req, res)=>{
 router.get('/usuarios',  (req, res)=>{
     mysqlConeccion.query('select * from usuarios', (err, registro)=>{
         if(!err){
+            // console.log(registro.length)
             res.json(registro);
         }else{
             console.log(err)
@@ -165,26 +169,40 @@ router.get('/usuarios',  (req, res)=>{
 ////////////login de usuarios //////////////
 router.post('/login', (req, res)=>{
     const {username, password} =req.body
-    mysqlConeccion.query('select u.id, u.username, u.email, u.apellido_nombre from usuarios u where u.estado="A" AND username=? AND password=?',[username, password], (err, rows)=>{
-        if(!err){
-            console.log(rows);
-            res.json(rows);
-        }else{
-            res.send('Error'+ err);
-        }
-    });
-    
+    if(username!=undefined && password!=undefined){
+        mysqlConeccion.query('select u.id, u.username,  u.password,  u.email, u.apellido_nombre from usuarios u where u.estado="A" AND username=?',[username], (err, rows)=>{
+            if(!err){
+                if(rows.length!=0){
+
+                    const bcryptPassword = bcrypt.compareSync(password, rows[0].password);
+                    if(bcryptPassword){
+                        res.json(rows);
+                    }else{
+                        res.send('La contraseña esta mal');
+                    }
+                }else{
+                    res.send('El usuario no existe ');
+                }
+            }else{
+                res.send('Error de silicon: '+err);
+            }
+        });
+    }else{
+        res.send('Faltan completar datos');
+    }
 });
 
 ////////////login de usuarios //////////////
-router.post('/registro', (req, res)=>{
+router.post('/registro', async(req, res)=>{
     const {username, password, email, apellido_nombre} =req.body
-    let query=`INSERT INTO usuarios (username, password, email, apellido_nombre, fecha_creacion) VALUES ('${username}','${password}','${email}','${apellido_nombre}',NOW())`;
+
+    let hash = bcrypt.hashSync(password,10);
+    let query=`INSERT INTO usuarios (username, password, email, apellido_nombre, fecha_creacion) VALUES ('${username}','${hash}','${email}','${apellido_nombre}',NOW())`;
     mysqlConeccion.query(query, (err, registros)=>{
         if(!err){
             res.send('Se inserto correctamente nuestro usuario: '+username);
         }else{
-            res.send('Ocurrio un error desde el servidor');
+            res.send('Ocurrio un error desde el servidor'+err);
         }
     })
 });
