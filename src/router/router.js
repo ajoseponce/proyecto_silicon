@@ -134,25 +134,46 @@ router.get('/alumnos', verificarToken, (req, res)=>{
 });
 
 // Devolver los datos de un alumno puntual que recibamos el ID
-router.get('/alumnos/:id_alumno', (req, res)=>{
-    const  { id_alumno } = req.params;
-    jwt.verify(req.token, 'siliconKey', (error, valido)=>{
-        if(error){
-            res.sendStatus(403);
-        }else{
-        
-            mysqlConeccion.query('select * from alumnos where id_alumno=?',[id_alumno], (err, rows)=>{
-                if(!err){
-                    res.json(rows);
-                }else{
-                    console.log(err)
-                }
+router.get('/alumnos/:id_alumno', verificarToken, (req, res)=>{
+    const  parametro  = req.params.id_alumno;
+    if(esNumero(parametro)){
+        res.json(
+            {
+                status: false,
+                mensaje:"El parametro que se espera tiene ser un numero entero"
             });
-        }
-    });
+    }else{
+        jwt.verify(req.token, 'siliconKey', (error, valido)=>{
+            if(error){
+                // console.log(' entra aca')
+                res.sendStatus(403);
+            }else{
+                mysqlConeccion.query('select * from alumnos where id_alumno=?',[parametro], (err, rows)=>{
+                    if(!err){
+                        if(rows.length!=0){
+                            res.json(rows);
+                        }else{
+                            res.json(
+                                {
+                                    status: false,
+                                    mensaje:"El ID del alumno no existe en la base de datos."
+                                });
+                        }    
+                    }else{
+                        res.json(
+                        {
+                            status: false,
+                            mensaje:"Error en el servidor."
+                        });
+                    }
+                });
+                
+            }
+        });
+    }
 })
 //metodo para insertar alumnos a travez del metodo POST
-router.post('/alumnos', (req, res)=>{
+router.post('/alumnos', verificarToken, (req, res)=>{
     console.log(req.body);
     const { apellido, nombre, dni, fecha_nacimiento, sexo } = req.body
     jwt.verify(req.token, 'siliconKey', (error, valido)=>{
@@ -174,7 +195,7 @@ router.post('/alumnos', (req, res)=>{
 });
 
 //metodo para elimiinar los datos de un alumno en particular
-router.delete('/alumnos/:id', (req, res)=>{
+router.delete('/alumnos/:id',verificarToken ,(req, res)=>{
     //asigna a id_alumno el valor que recibe por el parametro 
     let id_alumno  = req.params.id; 
     jwt.verify(req.token, 'siliconKey', (error, valido)=>{
@@ -194,13 +215,14 @@ router.delete('/alumnos/:id', (req, res)=>{
  });
 
 //metodo para editar los datos de un alumno en particular
-router.put('/alumnos/:id', (req, res)=>{
+router.put('/alumnos/:id',verificarToken , (req, res)=>{
     //asigna a id_curso el valor que recibe por el parametro 
     let id_alumno  = req.params.id;
     //asigna el valor que recibe  en el Body 
     const { apellido, nombre, dni , fecha_nacimiento, sexo, domicilio, estado_civil } =req.body  
     jwt.verify(req.token, 'siliconKey', (error, valido)=>{
         if(error){
+            
             res.sendStatus(403);
         }else{
             let query=`UPDATE alumnos SET apellido='${apellido}', nombre='${nombre}', dni='${dni}', fecha_nacimiento='${fecha_nacimiento}', estado_civil='${estado_civil}', sexo='${sexo}', domicilio='${domicilio}', fecha_modificacion=NOW() WHERE id_alumno='${id_alumno}'`;
@@ -244,37 +266,51 @@ router.post('/login', (req, res)=>{
         mysqlConeccion.query('select u.id, u.username,  u.password,  u.email, u.apellido_nombre from usuarios u where u.estado="A" AND username=?',[username], (err, rows)=>{
             if(!err){
                 if(rows.length!=0){
-
                     const bcryptPassword = bcrypt.compareSync(password, rows[0].password);
                     if(bcryptPassword){
-                        jwt.sign({rows}, 'siliconKey', {expiresIn:'30s'},(err, token)=>{
+                        jwt.sign({rows}, 'siliconKey', {expiresIn:'1200s'},(err, token)=>{
                             res.json(
                                 {
+                                    status: true,
                                     datos: rows,
                                     token: token
                                 });
-                        })
-                        
-                        
+                        }) 
                     }else{
-                        res.send('La contraseña esta mal');
+                        res.json(
+                            {
+                                status: false,
+                                mensaje:"La Contraseña es incorrecta"
+                            });
                     }
                 }else{
-                    res.send('El usuario no existe ');
+                    res.json(
+                        {
+                            status: false,
+                            mensaje:"El usuario no existe "
+                        });
+                    
                 }
             }else{
-                res.send('Error de silicon: '+err);
+                res.json(
+                    {
+                        status: false,
+                        mensaje:"Error en el servidor"
+                    });
+                
             }
         });
     }else{
-        res.send('Faltan completar datos');
+        res.json({
+            status: false,
+            mensaje:"Faltan completar datos"
+        });
     }
 });
 
 ////////////login de usuarios //////////////
 router.post('/registro', async(req, res)=>{
     const {username, password, email, apellido_nombre} =req.body
-
     let hash = bcrypt.hashSync(password,10);
     let query=`INSERT INTO usuarios (username, password, email, apellido_nombre, fecha_creacion) VALUES ('${username}','${hash}','${email}','${apellido_nombre}',NOW())`;
     mysqlConeccion.query(query, (err, registros)=>{
@@ -285,7 +321,7 @@ router.post('/registro', async(req, res)=>{
         }
     })
 });
-// //////////////////////nuestra ruta de prueba de generacion/////////
+// //////////////////////Nuestras funciones /////////
 function verificarToken(req, res, next){
     const BearerHeader= req.headers['authorization']
     if(typeof BearerHeader!=='undefined'){
@@ -297,5 +333,14 @@ function verificarToken(req, res, next){
         // console.log('Ocurrio un error')
     }
 }
+
+function esNumero(parametro) {
+    if(!isNaN(parseInt(parametro))){
+        return false
+    } else {
+        return true
+    }
+}
+
 module.exports = router;
 
