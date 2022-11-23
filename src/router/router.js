@@ -69,6 +69,41 @@ router.post('/cursos', verificarToken, (req, res)=>{
     })
 });
 
+//metodo para buscar un cursos por su descripcion
+router.get('/busqueda_cursos', (req, res)=>{
+    const nombre =req.body.nombre
+    console.log(nombre)
+    let query;
+    if(nombre){
+        // console.log('hola ingresa condicion')
+        query=`SELECT concat_ws(' ', a.apellido, a.nombre) alumno, c.nombre curso 
+        FROM proyecto_silicon.alumnos a 
+        inner join alumno_curso ac on ac.id_alumno=a.id_alumno 
+        inner join curso c on c.id_curso=ac.id_curso  where c.nombre like '%${nombre}%'`;
+    }else{
+        query=`SELECT concat_ws(' ', a.apellido, a.nombre) alumno, c.nombre curso 
+        FROM proyecto_silicon.alumnos a 
+        inner join alumno_curso ac on ac.id_alumno=a.id_alumno 
+        inner join curso c on c.id_curso=ac.id_curso `;
+    }
+   
+
+    mysqlConeccion.query(query, (err, registros)=>{
+        if(!err){
+            res.json(
+                {
+                    status: true,
+                    registros:registros
+                });
+           
+        }else{
+            console.log(err)
+        }
+    })
+        
+    
+});
+
 //metodo para editar los datos de un curso en particular
 router.put('/cursos/:id_curso', verificarToken, (req, res)=>{
     //asigna a id_curso el valor que recibe por el parametro 
@@ -174,7 +209,6 @@ router.get('/alumnos/:id_alumno', verificarToken, (req, res)=>{
 })
 //metodo para insertar alumnos a travez del metodo POST
 router.post('/alumnos', verificarToken, (req, res)=>{
-    console.log(req.body);
     const { apellido, nombre, dni, fecha_nacimiento, sexo } = req.body
     jwt.verify(req.token, 'siliconKey', (error, valido)=>{
         if(error){
@@ -194,6 +228,35 @@ router.post('/alumnos', verificarToken, (req, res)=>{
     
 });
 
+//metodo para insertar alumnos relacionados a un curso
+router.post('/alumno_curso', (req, res)=>{
+    console.log(req.body);
+    const { id_alumno, id_curso } = req.body
+    mysqlConeccion.query('select * from alumno_curso where id_alumno=? AND id_curso=?',[id_alumno, id_curso], (err, rows)=>{
+        if(!err){
+            if(rows.length!=0){
+                res.json(
+                    {
+                        status: false,
+                        mensaje:"El alumno ya se encuentra en este curso."
+                    });
+                
+            }else{
+                let query=`INSERT INTO alumno_curso (id_alumno, id_curso) VALUES ('${id_alumno}','${id_curso}')`;
+                mysqlConeccion.query(query, (err, registros)=>{
+                    if(!err){
+                        res.send('Se inserto correctamente nuestro alumno: '+id_alumno+'en el curso :'+id_curso);
+                    }else{
+                        console.log(err)
+                        res.send('El error es: '+err);
+                    }
+                })
+            }
+        }else{
+            res.send('El error es: '+err);
+        }
+        });  
+});
 //metodo para elimiinar los datos de un alumno en particular
 router.delete('/alumnos/:id',verificarToken ,(req, res)=>{
     //asigna a id_alumno el valor que recibe por el parametro 
