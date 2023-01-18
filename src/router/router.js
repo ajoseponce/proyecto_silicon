@@ -10,7 +10,7 @@ const mysqlConeccion = require('../database/database');
 
 ///////ruta raiz
 router.get('/', (req, res)=>{
-    res.send('Pantalla Inicio de nuestra aplicacion');
+    res.send('');
 });
 
 //.Devuelve  todos los cursos
@@ -21,7 +21,6 @@ router.get('/cursos', verificarToken, (req, res)=>{
         }else{
         mysqlConeccion.query('select * from curso', (err, registro)=>{
             if(!err){
-
                 res.json(registro);
             }else{
                 console.log(err)
@@ -75,12 +74,13 @@ router.get('/busqueda_cursos', (req, res)=>{
     console.log(nombre)
     let query;
     if(nombre){
-        // console.log('hola ingresa condicion')
+         console.log('hola ingresa a la primer  condicion')
         query=`SELECT concat_ws(' ', a.apellido, a.nombre) alumno, c.nombre curso 
         FROM proyecto_silicon.alumnos a 
         inner join alumno_curso ac on ac.id_alumno=a.id_alumno 
         inner join curso c on c.id_curso=ac.id_curso  where c.nombre like '%${nombre}%'`;
     }else{
+        console.log('hola ingresa en la segunda condicion')
         query=`SELECT concat_ws(' ', a.apellido, a.nombre) alumno, c.nombre curso 
         FROM proyecto_silicon.alumnos a 
         inner join alumno_curso ac on ac.id_alumno=a.id_alumno 
@@ -97,7 +97,8 @@ router.get('/busqueda_cursos', (req, res)=>{
                 });
            
         }else{
-            console.log(err)
+            // console.log(err)
+            res.send('Hubo un error en el servidor');
         }
     })
         
@@ -157,6 +158,25 @@ router.get('/alumnos', verificarToken, (req, res)=>{
             res.sendStatus(403);
         }else{
             const query='select * from alumnos where estado="A"';
+            mysqlConeccion.query(query, (err, rows)=>{
+                if(!err){
+                    res.json(rows);
+                }else{
+                    console.log(err)
+                }
+            })
+        }
+    });    
+});
+
+
+router.get('/alumnos_cantidad_cursos', verificarToken, (req, res)=>{
+    // res.send('Listado de alumnos');
+    jwt.verify(req.token, 'siliconKey', (error, valido)=>{
+        if(error){
+            res.sendStatus(403);
+        }else{
+            const query='SELECT T.id_alumno, T.alumno, T.cantidad_cursos, T.sexo from (SELECT A.id_alumno, CONCAT_WS(" ", A.apellido, A.nombre ) alumno, sexo, COUNT(id_alumno_curso) cantidad_cursos FROM alumnos as A inner join alumno_curso as AC ON AC.id_alumno=A.id_alumno LEFT join curso C ON C.id_curso=AC.id_curso where estado = "A" GROUP by id_alumno) AS T order by T.cantidad_cursos DESC';
             mysqlConeccion.query(query, (err, rows)=>{
                 if(!err){
                     res.json(rows);
@@ -375,6 +395,7 @@ router.post('/login', (req, res)=>{
 router.post('/registro', async(req, res)=>{
     const {username, password, email, apellido_nombre} =req.body
     let hash = bcrypt.hashSync(password,10);
+
     let query=`INSERT INTO usuarios (username, password, email, apellido_nombre, fecha_creacion) VALUES ('${username}','${hash}','${email}','${apellido_nombre}',NOW())`;
     mysqlConeccion.query(query, (err, registros)=>{
         if(!err){
@@ -384,6 +405,26 @@ router.post('/registro', async(req, res)=>{
         }
     })
 });
+
+router.put('/resetpassword/:id', (req, res)=>{
+    // asigna a id_usuario el valor que recibe por el parametro 
+     let id  = req.params.id;
+    // //asigna el valor que recibe  en el Body 
+     const { password } =req.body 
+     let hash = bcrypt.hashSync(password,10); 
+    //  generamos la query de modificacion del password
+     let query=`UPDATE usuarios SET password='${hash}' WHERE id='${id}'`;
+     mysqlConeccion.query(query, (err, registros)=>{
+        if(!err){
+            res.send('El Id que editamos es : '+id+' y cambiamos el password! Muchas gracias!');
+        }else{
+            console.log(err)
+        }
+    })
+
+    
+});
+////////////// /////////////////
 // //////////////////////Nuestras funciones /////////
 function verificarToken(req, res, next){
     const BearerHeader= req.headers['authorization']
@@ -392,7 +433,7 @@ function verificarToken(req, res, next){
         req.token=bearerToken;
         next();
     }else{
-         res.sendStatus(403);
+         res.send('Para consultar las apis debe estar autenticado.Gracias');
         // console.log('Ocurrio un error')
     }
 }
