@@ -14,11 +14,11 @@ router.get('/', (req, res)=>{
 });
 
 //.Devuelve  todos los cursos
-router.get('/cursos', verificarToken, (req, res)=>{
-    jwt.verify(req.token, 'siliconKey', (error, valido)=>{
-        if(error){
-            res.sendStatus(403);
-        }else{
+router.get('/cursos', (req, res)=>{
+    // jwt.verify(req.token, 'siliconKey', (error, valido)=>{
+        // if(error){
+        //     res.sendStatus(403);
+        // }else{
         mysqlConeccion.query('select * from curso', (err, registro)=>{
             if(!err){
                 res.json(registro);
@@ -26,46 +26,82 @@ router.get('/cursos', verificarToken, (req, res)=>{
                 console.log(err)
             }
         })
-        }
-    })
+        // }
+    // })
 });
 
-//.Devuelve los datos de un curso puntual
-router.get('/cursos/:id_curso', verificarToken,(req, res)=>{
-    const  { id_curso } = req.params;
-    jwt.verify(req.token, 'siliconKey', (error, valido)=>{
-        if(error){
-            res.sendStatus(403);
+
+router.put('/cambioestadoalumno/:id', (req, res)=>{
+     let id  = req.params.id;
+     let estado=req.body.estado  
+     
+     let query=`UPDATE alumnos SET estado='${estado}' WHERE id_alumno='${id}'`;
+     mysqlConeccion.query(query, (err, registros)=>{
+        if(!err){
+            res.json({
+                status: true,
+                mensaje:"El estado del alumno se cambio correctamente"
+            });
         }else{
-            mysqlConeccion.query('select * from curso where id_curso=?',[id_curso], (err, registros)=>{
-                if(!err){
-                    res.json(registros);
-                }else{
-                    console.log(err)
-                }
-            })
+            res.json({
+                status: false,
+                mensaje:"Hubo un error"
+            });
         }
     })
+    
 });
 
-// 
-//metodo para insertar cursos por el metodo POST
-router.post('/cursos', verificarToken, (req, res)=>{
+router.put('/altacurso/:id', (req, res)=>{
+    let id  = req.params.id;
+    let query=`UPDATE curso SET estado='A' WHERE id_curso='${id}'`;
+
+     mysqlConeccion.query(query, (err, registros)=>{
+        if(!err){
+            res.json({
+                status: true,
+                mensaje:"El curso se dio de Alta correctamente"
+            });
+        }else{
+           res.json({
+                status: false,
+                mensaje:"Hubo un error"
+            });
+        }
+    })
+    
+});
+
+router.get('/cursos/:id_curso',(req, res)=>{
+
+        const  { id_curso } = req.params;
+                mysqlConeccion.query('select * from curso where id_curso=?',[id_curso], (err, registros)=>{
+                    if(!err){
+                        res.json(registros);
+                    }else{
+                        console.log(err)
+                    }
+                })
+       
+    });
+
+router.post('/cursos', (req, res)=>{
     const { nombre } =req.body
-    jwt.verify(req.token, 'siliconKey', (error, valido)=>{
-        if(error){
-            res.sendStatus(403);
-        }else{
-            let query=`INSERT INTO curso (nombre) VALUES ('${nombre}')`;
+     console.log(req.body);
+            let query=`INSERT INTO curso (nombre, estado) VALUES ('${nombre}', 'A')`;
             mysqlConeccion.query(query, (err, registros)=>{
                 if(!err){
-                    res.send('Se inserto correctamente nuestro dato: '+nombre);
+                    res.json({
+                        status: true,
+                        mensaje:"El curso se dio de Alta correctamente"
+                    });
+                    // res.send('Se inserto correctamente nuestro dato: '+nombre);
                 }else{
                     console.log(err)
                 }
             })
-        }
-    })
+      
+    
 });
 
 //metodo para buscar un cursos por su descripcion
@@ -105,27 +141,21 @@ router.get('/busqueda_cursos', (req, res)=>{
     
 });
 
-//metodo para editar los datos de un curso en particular
-router.put('/cursos/:id_curso', verificarToken, (req, res)=>{
+router.put('/cursos/:id_curso', (req, res)=>{
     //asigna a id_curso el valor que recibe por el parametro 
     let id_curso  = req.params.id_curso;
     //asigna a nombre_nuevo_curso el valor que recibe  en el Body.nombre 
     let nombre_nuevo_curso=req.body.nombre  
-    // res.send('El Id que editamos es : '+id_curso+' y cambiamos el nombre a : '+nombre_nuevo_curso);
-    jwt.verify(req.token, 'siliconKey', (error, valido)=>{
-        if(error){
-            res.sendStatus(403);
-        }else{
-            let query=`UPDATE curso SET nombre='${nombre_nuevo_curso}' WHERE id_curso='${id_curso}'`;
-            mysqlConeccion.query(query, (err, registros)=>{
-                if(!err){
-                    res.send('El Id que editamos es : '+id_curso+' y cambiamos el nombre a : '+nombre_nuevo_curso);
-                }else{
-                    console.log(err)
-                }
-            });
-        }
-    });
+        
+        let query=`UPDATE curso SET nombre='${nombre_nuevo_curso}' WHERE id_curso='${id_curso}'`;
+        mysqlConeccion.query(query, (err, registros)=>{
+            if(!err){
+                res.send('El Id que editamos es : '+id_curso+' y cambiamos el nombre a : '+nombre_nuevo_curso);
+            }else{
+                console.log(err)
+            }
+        });
+        
 });
 
 //metodo para elimiinar los datos de un curso en particular
@@ -151,24 +181,37 @@ router.delete('/cursos/:id_curso', (req, res)=>{
 //////////////ALUMNOS //////////
 ////////////// /////////////////
 //Devuelve a todos los alumnos activos de nuestra base de datos 
-router.get('/alumnos', verificarToken, (req, res)=>{
-    // res.send('Listado de alumnos');
-    jwt.verify(req.token, 'siliconKey', (error, valido)=>{
-        if(error){
-            res.sendStatus(403);
-        }else{
-            const query='select * from alumnos where estado="A"';
-            mysqlConeccion.query(query, (err, rows)=>{
-                if(!err){
-                    res.json(rows);
-                }else{
-                    console.log(err)
-                }
-            })
-        }
-    });    
-});
-
+// router.get('/alumnos', verificarToken, (req, res)=>{
+//     // res.send('Listado de alumnos');
+//     jwt.verify(req.token, 'siliconKey', (error, valido)=>{
+//         if(error){
+//             res.sendStatus(403);
+//         }else{
+//             const query='select * from alumnos where estado="A"';
+//             mysqlConeccion.query(query, (err, rows)=>{
+//                 if(!err){
+//                     res.json(rows);
+//                 }else{
+//                     console.log(err)
+//                 }
+//             })
+//         }
+//     });    
+// });
+router.get('/alumnos', (req, res)=>{
+        // res.send('Listado de alumnos');
+        
+                const query='select * from alumnos ';
+                mysqlConeccion.query(query, (err, rows)=>{
+                    if(!err){
+                        res.json(rows);
+                    }else{
+                        console.log(err)
+                    }
+                })
+            
+         
+    });
 
 router.get('/alumnos_cantidad_cursos', verificarToken, (req, res)=>{
     // res.send('Listado de alumnos');
@@ -188,8 +231,47 @@ router.get('/alumnos_cantidad_cursos', verificarToken, (req, res)=>{
     });    
 });
 
-// Devolver los datos de un alumno puntual que recibamos el ID
-router.get('/alumnos/:id_alumno', verificarToken, (req, res)=>{
+// // Devolver los datos de un alumno puntual que recibamos el ID
+// router.get('/alumnos/:id_alumno', verificarToken, (req, res)=>{
+//     const  parametro  = req.params.id_alumno;
+//     if(esNumero(parametro)){
+//         res.json(
+//             {
+//                 status: false,
+//                 mensaje:"El parametro que se espera tiene ser un numero entero"
+//             });
+//     }else{
+//         jwt.verify(req.token, 'siliconKey', (error, valido)=>{
+//             if(error){
+//                 // console.log(' entra aca')
+//                 res.sendStatus(403);
+//             }else{
+//                 mysqlConeccion.query('select * from alumnos where id_alumno=?',[parametro], (err, rows)=>{
+//                     if(!err){
+//                         if(rows.length!=0){
+//                             res.json(rows);
+//                         }else{
+//                             res.json(
+//                                 {
+//                                     status: false,
+//                                     mensaje:"El ID del alumno no existe en la base de datos."
+//                                 });
+//                         }    
+//                     }else{
+//                         res.json(
+//                         {
+//                             status: false,
+//                             mensaje:"Error en el servidor."
+//                         });
+//                     }
+//                 });
+                
+//             }
+//         });
+//     }
+// })
+
+router.get('/alumnos/:id_alumno', (req, res)=>{
     const  parametro  = req.params.id_alumno;
     if(esNumero(parametro)){
         res.json(
@@ -198,12 +280,7 @@ router.get('/alumnos/:id_alumno', verificarToken, (req, res)=>{
                 mensaje:"El parametro que se espera tiene ser un numero entero"
             });
     }else{
-        jwt.verify(req.token, 'siliconKey', (error, valido)=>{
-            if(error){
-                // console.log(' entra aca')
-                res.sendStatus(403);
-            }else{
-                mysqlConeccion.query('select * from alumnos where id_alumno=?',[parametro], (err, rows)=>{
+                mysqlConeccion.query('select *, DATE_FORMAT(fecha_nacimiento, "%Y-%m-%d") as fecha_formateada from alumnos where id_alumno=?',[parametro], (err, rows)=>{
                     if(!err){
                         if(rows.length!=0){
                             res.json(rows);
@@ -224,8 +301,6 @@ router.get('/alumnos/:id_alumno', verificarToken, (req, res)=>{
                 });
                 
             }
-        });
-    }
 })
 //metodo para insertar alumnos a travez del metodo POST
 router.post('/alumnos', verificarToken, (req, res)=>{
@@ -298,48 +373,71 @@ router.delete('/alumnos/:id',verificarToken ,(req, res)=>{
  });
 
 //metodo para editar los datos de un alumno en particular
-router.put('/alumnos/:id',verificarToken , (req, res)=>{
+router.put('/alumnos/:id' , (req, res)=>{
     //asigna a id_curso el valor que recibe por el parametro 
     let id_alumno  = req.params.id;
-    //asigna el valor que recibe  en el Body 
     const { apellido, nombre, dni , fecha_nacimiento, sexo, domicilio, estado_civil } =req.body  
-    jwt.verify(req.token, 'siliconKey', (error, valido)=>{
-        if(error){
-            
-            res.sendStatus(403);
-        }else{
-            let query=`UPDATE alumnos SET apellido='${apellido}', nombre='${nombre}', dni='${dni}', fecha_nacimiento='${fecha_nacimiento}', estado_civil='${estado_civil}', sexo='${sexo}', domicilio='${domicilio}', fecha_modificacion=NOW() WHERE id_alumno='${id_alumno}'`;
-            mysqlConeccion.query(query, (err, registros)=>{
-                if(!err){
-                    res.send('El Id que editamos es : '+id_alumno+' y cambiamos muchos campos!!');
-                }else{
-                    console.log(err)
-                }
-            })
-        }
-    })
-});
-////////////// /////////////////
-//////////////Usuarios /////////
-////////////// /////////////////
-router.get('/usuarios', verificarToken, (req, res)=>{
-
-        jwt.verify(req.token, 'siliconKey', (error, valido)=>{
-        if(error){
-            res.sendStatus(403);
-        }else{
-            mysqlConeccion.query('select * from usuarios', (err, registro)=>{
+    console.log(req.body)
+    let query=`UPDATE alumnos SET apellido='${apellido}', nombre='${nombre}', dni='${dni}', estado_civil='${estado_civil}', sexo='${sexo}', domicilio='${domicilio}', fecha_modificacion=NOW() WHERE id_alumno='${id_alumno}'`;
+    mysqlConeccion.query(query, (err, registros)=>{
         if(!err){
-            // console.log(registro.length)
-            res.json(registro);
+            res.send('El Id que editamos es : '+id_alumno+' y cambiamos muchos campos!!');
         }else{
             console.log(err)
         }
     })
-}
+       
+});
 
-})
-    
+// router.put('/alumnos/:id',verificarToken , (req, res)=>{
+//     //asigna a id_curso el valor que recibe por el parametro 
+//     let id_alumno  = req.params.id;
+//     //asigna el valor que recibe  en el Body 
+//     const { apellido, nombre, dni , fecha_nacimiento, sexo, domicilio, estado_civil } =req.body  
+//     jwt.verify(req.token, 'siliconKey', (error, valido)=>{
+//         if(error){
+            
+//             res.sendStatus(403);
+//         }else{
+//             let query=`UPDATE alumnos SET apellido='${apellido}', nombre='${nombre}', dni='${dni}', fecha_nacimiento='${fecha_nacimiento}', estado_civil='${estado_civil}', sexo='${sexo}', domicilio='${domicilio}', fecha_modificacion=NOW() WHERE id_alumno='${id_alumno}'`;
+//             mysqlConeccion.query(query, (err, registros)=>{
+//                 if(!err){
+//                     res.send('El Id que editamos es : '+id_alumno+' y cambiamos muchos campos!!');
+//                 }else{
+//                     console.log(err)
+//                 }
+//             })
+//         }
+//     })
+// });
+////////////// /////////////////
+//////////////Usuarios /////////
+////////////// /////////////////
+// router.get('/usuarios', verificarToken, (req, res)=>{
+
+//         jwt.verify(req.token, 'siliconKey', (error, valido)=>{
+//         if(error){
+//             res.sendStatus(403);
+//         }else{
+//             mysqlConeccion.query('select * from usuarios', (err, registro)=>{
+//         if(!err){
+//             // console.log(registro.length)
+//             res.json(registro);
+//         }else{
+//             console.log(err)
+//         }
+//     })
+// }
+
+router.get('/usuarios', (req, res)=>{
+     mysqlConeccion.query('select * from usuarios', (err, registro)=>{
+    if(!err){
+        // console.log(registro.length)
+        res.json(registro);
+    }else{
+        console.log(err)
+    }
+    })
 });
 
 ////////////login de usuarios //////////////
@@ -399,7 +497,10 @@ router.post('/registro', async(req, res)=>{
     let query=`INSERT INTO usuarios (username, password, email, apellido_nombre, fecha_creacion) VALUES ('${username}','${hash}','${email}','${apellido_nombre}',NOW())`;
     mysqlConeccion.query(query, (err, registros)=>{
         if(!err){
-            res.send('Se inserto correctamente nuestro usuario: '+username);
+            res.json({
+                status: true,
+                mensaje:"El usuario se creo correctamente"
+            });
         }else{
             res.send('Ocurrio un error desde el servidor'+err);
         }
@@ -422,6 +523,41 @@ router.put('/resetpassword/:id', (req, res)=>{
         }
     })
 
+    
+});
+
+
+router.put('/bajausuario/:id', (req, res)=>{
+    // asigna a id_usuario el valor que recibe por el parametro 
+     let id  = req.params.id;
+     let query=`UPDATE usuarios SET estado='B' WHERE id='${id}'`;
+     mysqlConeccion.query(query, (err, registros)=>{
+        if(!err){
+            res.json({
+                status: true,
+                mensaje:"El usuario se dio de BAJA correctamente"
+            });
+        }else{
+            console.log(err)
+        }
+    })
+    
+});
+
+router.put('/altausuario/:id', (req, res)=>{
+    // asigna a id_usuario el valor que recibe por el parametro 
+     let id  = req.params.id;
+     let query=`UPDATE usuarios SET estado='A' WHERE id='${id}'`;
+     mysqlConeccion.query(query, (err, registros)=>{
+        if(!err){
+            res.json({
+                status: true,
+                mensaje:"El usuario se dio de Alta correctamente"
+            });
+        }else{
+            console.log(err)
+        }
+    })
     
 });
 ////////////// /////////////////
