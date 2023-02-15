@@ -19,7 +19,7 @@ router.get('/cursos', (req, res)=>{
         // if(error){
         //     res.sendStatus(403);
         // }else{
-        mysqlConeccion.query('select * from curso', (err, registro)=>{
+        mysqlConeccion.query('select * from curso order by estado, nombre', (err, registro)=>{
             if(!err){
                 res.json(registro);
             }else{
@@ -213,6 +213,39 @@ router.get('/alumnos', (req, res)=>{
          
     });
 
+router.post('/buscar_alumnos', (req, res)=>{
+    
+    let {apellido, dni, sexo, nombre }=req.body  
+
+            var query='select * from alumnos where 1 ';
+            if(apellido){
+                query=query +`AND apellido like '%${apellido}%'`;
+            }
+            if(nombre){
+                query=query +`AND nombre like '%${nombre}%'`;
+            }
+
+            if(dni){
+                query=query +`AND dni like '%${dni}%'`;
+            }
+
+            if(sexo){
+                query=query +`AND sexo = '${sexo}'`;
+            }
+            // console.log(query);
+
+            mysqlConeccion.query(query, (err, rows)=>{
+                if(!err){
+                    // console.log(rows);
+                    res.json(rows);
+                }else{
+                    console.log(err)
+                }
+            })
+        
+        
+});
+
 router.get('/alumnos_cantidad_cursos', verificarToken, (req, res)=>{
     // res.send('Listado de alumnos');
     jwt.verify(req.token, 'siliconKey', (error, valido)=>{
@@ -303,13 +336,10 @@ router.get('/alumnos/:id_alumno', (req, res)=>{
             }
 })
 //metodo para insertar alumnos a travez del metodo POST
-router.post('/alumnos', verificarToken, (req, res)=>{
-    const { apellido, nombre, dni, fecha_nacimiento, sexo } = req.body
-    jwt.verify(req.token, 'siliconKey', (error, valido)=>{
-        if(error){
-            res.sendStatus(403);
-        }else{
-            let query=`INSERT INTO alumnos (apellido, nombre, dni, sexo,fecha_nacimiento, estado, fecha_creacion) VALUES ('${apellido}','${nombre}','${dni}','${sexo}','${fecha_nacimiento}', 'A', NOW())`;
+router.post('/alumnos', (req, res)=>{
+    const { apellido, nombre, dni, fecha_nacimiento, sexo, domicilio , estado_civil } = req.body
+    
+            let query=`INSERT INTO alumnos (apellido, nombre, dni, sexo,fecha_nacimiento, estado, fecha_creacion, domicilio, estado_civil) VALUES ('${apellido}','${nombre}','${dni}','${sexo}','${fecha_nacimiento}', 'A', NOW(),'${domicilio}','${estado_civil}')`;
             mysqlConeccion.query(query, (err, registros)=>{
                 if(!err){
                     res.send('Se inserto correctamente nuestro alumno: '+apellido+' '+nombre);
@@ -318,10 +348,29 @@ router.post('/alumnos', verificarToken, (req, res)=>{
                     res.send('El error es: '+err);
                 }
             })
-        }
-    })
+       
     
 });
+
+// router.post('/alumnos', verificarToken, (req, res)=>{
+//     const { apellido, nombre, dni, fecha_nacimiento, sexo, domicilio } = req.body
+//     jwt.verify(req.token, 'siliconKey', (error, valido)=>{
+//         if(error){
+//             res.sendStatus(403);
+//         }else{
+//             let query=`INSERT INTO alumnos (apellido, nombre, dni, sexo,fecha_nacimiento, estado, fecha_creacion, domicilio) VALUES ('${apellido}','${nombre}','${dni}','${sexo}','${fecha_nacimiento}', 'A', NOW(),'${domicilio}')`;
+//             mysqlConeccion.query(query, (err, registros)=>{
+//                 if(!err){
+//                     res.send('Se inserto correctamente nuestro alumno: '+apellido+' '+nombre);
+//                 }else{
+//                     console.log(err)
+//                     res.send('El error es: '+err);
+//                 }
+//             })
+//         }
+//     })
+    
+// });
 
 //metodo para insertar alumnos relacionados a un curso
 router.post('/alumno_curso', (req, res)=>{
