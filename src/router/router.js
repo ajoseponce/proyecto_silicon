@@ -14,11 +14,11 @@ router.get('/', (req, res)=>{
 });
 
 //.Devuelve  todos los cursos
-router.get('/cursos', (req, res)=>{
-    // jwt.verify(req.token, 'siliconKey', (error, valido)=>{
-        // if(error){
-        //     res.sendStatus(403);
-        // }else{
+router.get('/cursos', verificarToken, (req, res)=>{
+    jwt.verify(req.token, 'siliconKey', (error, valido)=>{
+        if(error){
+            res.sendStatus(403);
+        }else{
         mysqlConeccion.query('select * from curso order by estado, nombre', (err, registro)=>{
             if(!err){
                 res.json(registro);
@@ -26,8 +26,8 @@ router.get('/cursos', (req, res)=>{
                 console.log(err)
             }
         })
-        // }
-    // })
+        }
+    })
 });
 
 
@@ -181,37 +181,24 @@ router.delete('/cursos/:id_curso', (req, res)=>{
 //////////////ALUMNOS //////////
 ////////////// /////////////////
 //Devuelve a todos los alumnos activos de nuestra base de datos 
-// router.get('/alumnos', verificarToken, (req, res)=>{
-//     // res.send('Listado de alumnos');
-//     jwt.verify(req.token, 'siliconKey', (error, valido)=>{
-//         if(error){
-//             res.sendStatus(403);
-//         }else{
-//             const query='select * from alumnos where estado="A"';
-//             mysqlConeccion.query(query, (err, rows)=>{
-//                 if(!err){
-//                     res.json(rows);
-//                 }else{
-//                     console.log(err)
-//                 }
-//             })
-//         }
-//     });    
-// });
-router.get('/alumnos', (req, res)=>{
-        // res.send('Listado de alumnos');
-        
-                const query='select * from alumnos ';
-                mysqlConeccion.query(query, (err, rows)=>{
-                    if(!err){
-                        res.json(rows);
-                    }else{
-                        console.log(err)
-                    }
-                })
-            
-         
-    });
+router.get('/alumnos', verificarToken, (req, res)=>{
+    // res.send('Listado de alumnos');
+    jwt.verify(req.token, 'siliconKey', (error)=>{
+        if(error){
+            res.sendStatus(403);
+        }else{
+            const query='select * from alumnos';
+            mysqlConeccion.query(query, (err, rows)=>{
+                if(!err){
+                    res.json(rows);
+                }else{
+                    console.log(err)
+                }
+            })
+        }
+    });    
+});
+
 
 router.post('/buscar_alumnos', (req, res)=>{
     
@@ -462,32 +449,24 @@ router.put('/alumnos/:id' , (req, res)=>{
 ////////////// /////////////////
 //////////////Usuarios /////////
 ////////////// /////////////////
-// router.get('/usuarios', verificarToken, (req, res)=>{
+router.get('/usuarios', verificarToken, (req, res)=>{
 
-//         jwt.verify(req.token, 'siliconKey', (error, valido)=>{
-//         if(error){
-//             res.sendStatus(403);
-//         }else{
-//             mysqlConeccion.query('select * from usuarios', (err, registro)=>{
-//         if(!err){
-//             // console.log(registro.length)
-//             res.json(registro);
-//         }else{
-//             console.log(err)
-//         }
-//     })
-// }
-
-router.get('/usuarios', (req, res)=>{
-     mysqlConeccion.query('select * from usuarios', (err, registro)=>{
-    if(!err){
-        // console.log(registro.length)
-        res.json(registro);
-    }else{
-        console.log(err)
-    }
-    })
+        jwt.verify(req.token, 'siliconKey', (error, valido)=>{
+            if(error){
+                res.sendStatus(403);
+            }else{
+                mysqlConeccion.query('select * from usuarios', (err, registro)=>{
+                    if(!err){
+                        res.json(registro);
+                    }else{
+                        console.log(err)
+                    }
+                })
+            }
+        })   
+        
 });
+
 
 ////////////login de usuarios //////////////
 router.post('/login', (req, res)=>{
@@ -498,7 +477,7 @@ router.post('/login', (req, res)=>{
                 if(rows.length!=0){
                     const bcryptPassword = bcrypt.compareSync(password, rows[0].password);
                     if(bcryptPassword){
-                        jwt.sign({rows}, 'siliconKey', {expiresIn:'1200s'},(err, token)=>{
+                        jwt.sign({rows}, 'siliconKey' ,(err, token)=>{
                             res.json(
                                 {
                                     status: true,
@@ -612,6 +591,7 @@ router.put('/altausuario/:id', (req, res)=>{
 ////////////// /////////////////
 // //////////////////////Nuestras funciones /////////
 function verificarToken(req, res, next){
+    // console.log('controlo lo que llega', req.headers)
     const BearerHeader= req.headers['authorization']
     if(typeof BearerHeader!=='undefined'){
         const bearerToken= BearerHeader.split(" ")[1]
