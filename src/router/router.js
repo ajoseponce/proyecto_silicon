@@ -425,27 +425,7 @@ router.put('/alumnos/:id' , (req, res)=>{
        
 });
 
-// router.put('/alumnos/:id',verificarToken , (req, res)=>{
-//     //asigna a id_curso el valor que recibe por el parametro 
-//     let id_alumno  = req.params.id;
-//     //asigna el valor que recibe  en el Body 
-//     const { apellido, nombre, dni , fecha_nacimiento, sexo, domicilio, estado_civil } =req.body  
-//     jwt.verify(req.token, 'siliconKey', (error, valido)=>{
-//         if(error){
-            
-//             res.sendStatus(403);
-//         }else{
-//             let query=`UPDATE alumnos SET apellido='${apellido}', nombre='${nombre}', dni='${dni}', fecha_nacimiento='${fecha_nacimiento}', estado_civil='${estado_civil}', sexo='${sexo}', domicilio='${domicilio}', fecha_modificacion=NOW() WHERE id_alumno='${id_alumno}'`;
-//             mysqlConeccion.query(query, (err, registros)=>{
-//                 if(!err){
-//                     res.send('El Id que editamos es : '+id_alumno+' y cambiamos muchos campos!!');
-//                 }else{
-//                     console.log(err)
-//                 }
-//             })
-//         }
-//     })
-// });
+
 ////////////// /////////////////
 //////////////Usuarios /////////
 ////////////// /////////////////
@@ -588,6 +568,66 @@ router.put('/altausuario/:id', (req, res)=>{
     })
     
 });
+
+
+//////////////////////////////
+/////////////inscripciones///
+//////////////////////////////
+
+router.get('/inscripciones/:id_alumno', (req, res)=>{
+    const  parametro  = req.params.id_alumno;
+    if(esNumero(parametro)){
+        res.json(
+            {
+                status: false,
+                mensaje:"El parametro que se espera tiene ser un numero entero"
+            });
+    }else{
+                mysqlConeccion.query('select i.*, DATE_FORMAT(i.fecha_hora_creacion, "%d-%m-%Y %H:%i") as fecha_formateada, c.nombre curso FROM inscripciones AS i INNER JOIN curso AS c ON c.id_curso=i.id_curso WHERE id_alumno=?',[parametro], (err, rows)=>{
+                    if(!err){
+                        if(rows.length!=0){
+                            res.json(
+                                {
+                                    status: true,
+                                    registros:rows
+                                });
+                            
+                        }else{
+                            res.json(
+                                {
+                                    status: false,
+                                    mensaje:"El ID del alumno no existe en la base de datos."
+                                });
+                        }    
+                    }else{
+                        res.json(
+                        {
+                            status: false,
+                            mensaje:"Error en el servidor."
+                        });
+                    }
+                });
+                
+            }
+})
+
+
+router.get('/cursosSinAsignar/:id_alumno',(req, res)=>{
+
+    const  { id_alumno } = req.params;
+            mysqlConeccion.query('select c.*, i.id_alumno from curso c left join inscripciones i on i.id_curso=c.id_curso where (id_alumno!=? OR id_alumno is null) AND c.estado="A"',[id_alumno], (err, registros)=>{
+                if(!err){
+                    res.json(registros);
+                }else{
+                    console.log(err)
+                }
+            })
+   
+});
+
+//////////////////////////////
+/////////////  fin inscripciones///
+//////////////////////////////
 ////////////// /////////////////
 // //////////////////////Nuestras funciones /////////
 function verificarToken(req, res, next){
