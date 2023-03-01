@@ -339,25 +339,7 @@ router.post('/alumnos', (req, res)=>{
     
 });
 
-// router.post('/alumnos', verificarToken, (req, res)=>{
-//     const { apellido, nombre, dni, fecha_nacimiento, sexo, domicilio } = req.body
-//     jwt.verify(req.token, 'siliconKey', (error, valido)=>{
-//         if(error){
-//             res.sendStatus(403);
-//         }else{
-//             let query=`INSERT INTO alumnos (apellido, nombre, dni, sexo,fecha_nacimiento, estado, fecha_creacion, domicilio) VALUES ('${apellido}','${nombre}','${dni}','${sexo}','${fecha_nacimiento}', 'A', NOW(),'${domicilio}')`;
-//             mysqlConeccion.query(query, (err, registros)=>{
-//                 if(!err){
-//                     res.send('Se inserto correctamente nuestro alumno: '+apellido+' '+nombre);
-//                 }else{
-//                     console.log(err)
-//                     res.send('El error es: '+err);
-//                 }
-//             })
-//         }
-//     })
-    
-// });
+
 
 //metodo para insertar alumnos relacionados a un curso
 router.post('/alumno_curso', (req, res)=>{
@@ -501,7 +483,8 @@ router.post('/login', (req, res)=>{
 router.post('/registro', async(req, res)=>{
     const {username, password, email, apellido_nombre} =req.body
     let hash = bcrypt.hashSync(password,10);
-
+    
+// aca  consulto si existe ya ese nombre en la bd
     let query=`INSERT INTO usuarios (username, password, email, apellido_nombre, fecha_creacion) VALUES ('${username}','${hash}','${email}','${apellido_nombre}',NOW())`;
     mysqlConeccion.query(query, (err, registros)=>{
         if(!err){
@@ -510,7 +493,11 @@ router.post('/registro', async(req, res)=>{
                 mensaje:"El usuario se creo correctamente"
             });
         }else{
-            res.send('Ocurrio un error desde el servidor'+err);
+            res.json({
+                status: false,
+                mensaje:"Hubo un error en el servidor.La accion no se realizo"
+            });
+            // res.send('Ocurrio un error desde el servidor'+err);
         }
     })
 });
@@ -615,7 +602,7 @@ router.get('/inscripciones/:id_alumno', (req, res)=>{
 router.get('/cursosSinAsignar/:id_alumno',(req, res)=>{
 
     const  { id_alumno } = req.params;
-            mysqlConeccion.query('select c.*, i.id_alumno from curso c left join inscripciones i on i.id_curso=c.id_curso where (id_alumno!=? OR id_alumno is null) AND c.estado="A"',[id_alumno], (err, registros)=>{
+            mysqlConeccion.query('SELECT id_curso, nombre FROM curso WHERE id_curso NOT IN (SELECT id_curso FROM inscripciones WHERE id_alumno = ?)',[id_alumno], (err, registros)=>{
                 if(!err){
                     res.json(registros);
                 }else{
@@ -624,6 +611,30 @@ router.get('/cursosSinAsignar/:id_alumno',(req, res)=>{
             })
    
 });
+
+router.post('/inscripcion_alumnos', (req, res)=>{
+    const { id_alumno, id_curso, descripcion } =req.body
+    console.log(req.body)
+            let query=`INSERT INTO inscripciones (id_alumno, id_curso, estado, descripcion, fecha_hora_creacion ) VALUES ('${id_alumno}','${id_curso}', 'A','${descripcion}', NOW())`;
+            mysqlConeccion.query(query, (err, registros)=>{
+                if(!err){
+                    res.json({
+                        status: true,
+                        mensaje:"La inscripcion se realizo correctamente"
+                    });
+                    // res.send('Se inserto correctamente nuestro dato: '+nombre);
+                }else{
+                    res.json({
+                        status: false,
+                        mensaje:"La inscripcion NO se realizo."
+                    });
+                
+                }
+            })
+      
+    
+});
+// 
 
 //////////////////////////////
 /////////////  fin inscripciones///
